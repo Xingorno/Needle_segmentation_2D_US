@@ -9,11 +9,11 @@ class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
 
     def __init__(self, in_channels, out_channels, mid_channels=None):
-        super().__init__()
+        super().__init__() #avoid referring to the base class explicitly
         if not mid_channels:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),# why padding equals to 1, doesn't be consistent with U-Net paper
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1),
@@ -31,7 +31,7 @@ class Down(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.maxpool_conv = nn.Sequential(
-            nn.MaxPool2d(2),
+            nn.MaxPool2d(2),# stride default value is the kernel size
             DoubleConv(in_channels, out_channels)
         )
 

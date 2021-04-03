@@ -16,7 +16,7 @@ from utils.dataset import BasicDataset
 def predict_img(net,
                 full_img,
                 device,
-                scale_factor=1,
+                scale_factor=(512, 378),
                 out_threshold=0.5):
     net.eval()
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     in_files = args.input
     out_files = get_output_filenames(args)
 
-    net = UNet(n_channels=3, n_classes=1)
+    net = UNet(n_channels=1, n_classes=1)
 
     logging.info("Loading model {}".format(args.model))
 

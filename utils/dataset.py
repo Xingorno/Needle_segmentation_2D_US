@@ -9,12 +9,12 @@ from PIL import Image
 
 
 class BasicDataset(Dataset):
-    def __init__(self, imgs_dir, masks_dir, scale=1, mask_suffix=''):
+    def __init__(self, imgs_dir, masks_dir, scale = (512, 378), mask_suffix='_Mask'):
         self.imgs_dir = imgs_dir
         self.masks_dir = masks_dir
         self.scale = scale
         self.mask_suffix = mask_suffix
-        assert 0 < scale <= 1, 'Scale must be between 0 and 1'
+        # assert 0 < scale <= 1, 'Scale must be between 0 and 1'
 
         self.ids = [splitext(file)[0] for file in listdir(imgs_dir)
                     if not file.startswith('.')]
@@ -26,7 +26,8 @@ class BasicDataset(Dataset):
     @classmethod
     def preprocess(cls, pil_img, scale):
         w, h = pil_img.size
-        newW, newH = int(scale * w), int(scale * h)
+        # newW, newH = int(scale * w), int(scale * h)
+        newW, newH = scale
         assert newW > 0 and newH > 0, 'Scale is too small'
         pil_img = pil_img.resize((newW, newH))
 
@@ -67,5 +68,5 @@ class BasicDataset(Dataset):
 
 
 class CarvanaDataset(BasicDataset):
-    def __init__(self, imgs_dir, masks_dir, scale=1):
-        super().__init__(imgs_dir, masks_dir, scale, mask_suffix='_mask')
+    def __init__(self, imgs_dir, masks_dir, scale):
+        super().__init__(imgs_dir, masks_dir, scale, mask_suffix='_Mask')

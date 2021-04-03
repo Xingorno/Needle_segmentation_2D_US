@@ -16,26 +16,31 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.dataset import BasicDataset
 from torch.utils.data import DataLoader, random_split
 
-dir_img = 'data/imgs/'
-dir_mask = 'data/masks/'
+dir_img_train = 'data/train_image/'
+dir_mask_train = 'data/train_mask/'
+dir_image_validation = 'data/validation_image/'
+dir_mask_validation = 'data/validation_mask/'
 dir_checkpoint = 'checkpoints/'
 
 
 def train_net(net,
               device,
               epochs=5,
-              batch_size=1,
+              batch_size=2,
               lr=0.001,
               val_percent=0.1,
               save_cp=True,
-              img_scale=0.5):
+              img_scale= (512, 378)):
 
-    dataset = BasicDataset(dir_img, dir_mask, img_scale)
-    n_val = int(len(dataset) * val_percent)
-    n_train = len(dataset) - n_val
-    train, val = random_split(dataset, [n_train, n_val])
-    train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
-    val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, drop_last=True)
+    dataset_train = BasicDataset(dir_img_train, dir_mask_train, img_scale)
+    dataset_validation = BasicDataset(dir_image_validation, dir_mask_validation, img_scale)
+    n_train = int(len(dataset_train))
+    n_val = int(len(dataset_validation))
+    # n_val = int(len(dataset) * val_percent)
+    # n_train = len(dataset) - n_val
+    # train, val = random_split(dataset, [n_train, n_val])
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    val_loader = DataLoader(dataset_validation, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, drop_last=True)
 
     writer = SummaryWriter(comment=f'LR_{lr}_BS_{batch_size}_SCALE_{img_scale}')
     global_step = 0
@@ -51,12 +56,13 @@ def train_net(net,
         Images scaling:  {img_scale}
     ''')
 
-    optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min' if net.n_classes > 1 else 'max', patience=2)
+    # optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
+    optimizer = optim.Adam(net.parameters(), lr = lr)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min' if net.n_classes > 1 else 'max', patience=2)
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
     else:
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.BCEWithLogitsLoss()# including sigmoid + cross entropy 
 
     for epoch in range(epochs):
         net.train()
@@ -95,7 +101,7 @@ def train_net(net,
                         writer.add_histogram('weights/' + tag, value.data.cpu().numpy(), global_step)
                         writer.add_histogram('grads/' + tag, value.grad.data.cpu().numpy(), global_step)
                     val_score = eval_net(net, val_loader, device)
-                    scheduler.step(val_score)
+                    # scheduler.step(val_score)
                     writer.add_scalar('learning_rate', optimizer.param_groups[0]['lr'], global_step)
 
                     if net.n_classes > 1:
@@ -128,13 +134,13 @@ def get_args():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-e', '--epochs', metavar='E', type=int, default=5,
                         help='Number of epochs', dest='epochs')
-    parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=1,
+    parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=2,
                         help='Batch size', dest='batchsize')
     parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.0001,
                         help='Learning rate', dest='lr')
     parser.add_argument('-f', '--load', dest='load', type=str, default=False,
                         help='Load model from a .pth file')
-    parser.add_argument('-s', '--scale', dest='scale', type=float, default=0.5,
+    parser.add_argument('-s', '--scale', dest='scale', type=float, default= (512, 378),
                         help='Downscaling factor of the images')
     parser.add_argument('-v', '--validation', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')
@@ -154,7 +160,7 @@ if __name__ == '__main__':
     #   - For 1 class and background, use n_classes=1
     #   - For 2 classes, use n_classes=1
     #   - For N > 2 classes, use n_classes=N
-    net = UNet(n_channels=3, n_classes=1, bilinear=True)
+    net = UNet(n_channels=1, n_classes=1, bilinear=True)
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'
@@ -178,6 +184,7 @@ if __name__ == '__main__':
                   device=device,
                   img_scale=args.scale,
                   val_percent=args.val / 100)
+
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')
