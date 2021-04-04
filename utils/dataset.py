@@ -9,11 +9,12 @@ from PIL import Image
 
 
 class BasicDataset(Dataset):
-    def __init__(self, imgs_dir, masks_dir, scale = (512, 378), mask_suffix='_Mask'):
+    def __init__(self, imgs_dir, masks_dir, scale = (512, 378), mask_suffix='_Mask', transforms=None):
         self.imgs_dir = imgs_dir
         self.masks_dir = masks_dir
         self.scale = scale
         self.mask_suffix = mask_suffix
+        self.transforms = transforms
         # assert 0 < scale <= 1, 'Scale must be between 0 and 1'
 
         self.ids = [splitext(file)[0] for file in listdir(imgs_dir)
@@ -24,7 +25,8 @@ class BasicDataset(Dataset):
         return len(self.ids)
 
     @classmethod
-    def preprocess(cls, pil_img, scale):
+    def preprocess(cls, pil_img, scale, transforms):
+        # pil_img = transforms(pil_img) # augmented images
         w, h = pil_img.size
         # newW, newH = int(scale * w), int(scale * h)
         newW, newH = scale
@@ -58,9 +60,9 @@ class BasicDataset(Dataset):
         assert img.size == mask.size, \
             f'Image and mask {idx} should be the same size, but are {img.size} and {mask.size}'
 
-        img = self.preprocess(img, self.scale)
-        mask = self.preprocess(mask, self.scale)
-
+        img = self.preprocess(img, self.scale, self.transforms)
+        mask = self.preprocess(mask, self.scale, self.transforms)
+        # transfer to tensor
         return {
             'image': torch.from_numpy(img).type(torch.FloatTensor),
             'mask': torch.from_numpy(mask).type(torch.FloatTensor)

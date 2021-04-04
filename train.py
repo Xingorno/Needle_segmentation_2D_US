@@ -8,6 +8,8 @@ import torch
 import torch.nn as nn
 from torch import optim
 from tqdm import tqdm
+import torchvision
+import torchvision.transforms as transforms
 
 from eval import eval_net
 from unet import UNet
@@ -32,7 +34,13 @@ def train_net(net,
               save_cp=True,
               img_scale= (512, 378)):
 
-    dataset_train = BasicDataset(dir_img_train, dir_mask_train, img_scale)
+    train_transforms = transforms.Compose([
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(degrees=(-20, 20)),
+        transforms.RandomAffine(degrees = 0, translate=(0.1, 0.1), scale=(0.9, 1.1))
+    ])
+    
+    dataset_train = BasicDataset(dir_img_train, dir_mask_train, img_scale, mask_suffix='_Mask', transforms = train_transforms)
     dataset_validation = BasicDataset(dir_image_validation, dir_mask_validation, img_scale)
     n_train = int(len(dataset_train))
     n_val = int(len(dataset_validation))
@@ -76,7 +84,7 @@ def train_net(net,
                     f'Network has been defined with {net.n_channels} input channels, ' \
                     f'but loaded images have {imgs.shape[1]} channels. Please check that ' \
                     'the images are loaded correctly.'
-
+                
                 imgs = imgs.to(device=device, dtype=torch.float32)
                 mask_type = torch.float32 if net.n_classes == 1 else torch.long
                 true_masks = true_masks.to(device=device, dtype=mask_type)
@@ -160,7 +168,7 @@ if __name__ == '__main__':
     #   - For 1 class and background, use n_classes=1
     #   - For 2 classes, use n_classes=1
     #   - For N > 2 classes, use n_classes=N
-    net = UNet(n_channels=1, n_classes=1, bilinear=True)
+    net = UNet(n_channels=1, n_classes=1, bilinear=False)
     logging.info(f'Network:\n'
                  f'\t{net.n_channels} input channels\n'
                  f'\t{net.n_classes} output channels (classes)\n'
