@@ -18,17 +18,17 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.dataset import BasicDataset
 from torch.utils.data import DataLoader, random_split
 
-dir_img_train = 'data/train_image/'
-dir_mask_train = 'data/train_mask/'
-dir_image_validation = 'data/validation_image/'
-dir_mask_validation = 'data/validation_mask/'
-dir_checkpoint = 'checkpoints/'
+dir_img_train = 'Pytorch-UNet/data/train_image/'
+dir_mask_train = 'Pytorch-UNet/data/train_mask/'
+dir_image_validation = 'Pytorch-UNet/data/validation_image/'
+dir_mask_validation = 'Pytorch-UNet/data/validation_mask/'
+dir_checkpoint = 'Needle_segmentation_2D_US/checkpoints_dropout/'
 
 
 def train_net(net,
               device,
-              epochs=5,
-              batch_size=2,
+              epochs=150,
+              batch_size=8,
               lr=0.001,
               val_percent=0.1,
               save_cp=True,
@@ -140,9 +140,9 @@ def train_net(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=5,
+    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=150,
                         help='Number of epochs', dest='epochs')
-    parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=2,
+    parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?', default=8,
                         help='Batch size', dest='batchsize')
     parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=0.0001,
                         help='Learning rate', dest='lr')

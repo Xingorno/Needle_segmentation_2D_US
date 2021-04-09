@@ -1,11 +1,12 @@
 import argparse
 import logging
 import os
-
+from os import listdir
 import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
+import torchvision
 from torchvision import transforms
 
 from unet import UNet
@@ -20,7 +21,7 @@ def predict_img(net,
                 out_threshold=0.5):
     net.eval()
 
-    img = torch.from_numpy(BasicDataset.preprocess(full_img, scale_factor))
+    img = torch.from_numpy(BasicDataset.preprocess(full_img, scale=scale_factor,transforms=None))
 
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
@@ -52,11 +53,11 @@ def predict_img(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Predict masks from input images',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model', '-m', default='MODEL.pth',
+    parser.add_argument('--model', '-m', default='checkpoints/CP_epoch200.pth',
                         metavar='FILE',
                         help="Specify the file in which the model is stored")
-    parser.add_argument('--input', '-i', metavar='INPUT', nargs='+',
-                        help='filenames of input images', required=True)
+    parser.add_argument('--input', '-i', default='/home/ROBARTS/sxing/Needle_segmentation_2D_US/Pytorch-UNet/data/P003_liver_needle_insertion/Needle_Video_02/', metavar='INPUT', nargs='+',
+                        help='filenames of input images')
 
     parser.add_argument('--output', '-o', metavar='INPUT', nargs='+',
                         help='Filenames of ouput images')
@@ -71,20 +72,22 @@ def get_args():
                         default=0.5)
     parser.add_argument('--scale', '-s', type=float,
                         help="Scale factor for the input images",
-                        default=0.5)
+                        default=(512, 378))
 
     return parser.parse_args()
 
 
 def get_output_filenames(args):
     in_files = args.input
+    # in_files = 'data/test_image/'
     out_files = []
-
+    in_files_l= listdir(in_files)
     if not args.output:
-        for f in in_files:
+        for f in in_files_l:
             pathsplit = os.path.splitext(f)
-            out_files.append("{}_OUT{}".format(pathsplit[0], pathsplit[1]))
-    elif len(in_files) != len(args.output):
+            # out_files = 'Out_'+pathsplit[0]+pathsplit[1]
+            out_files.append("OUT_{}{}".format(pathsplit[0], pathsplit[1]))
+    elif len(in_files_l) != len(args.output):
         logging.error("Input files and output files are not of the same length")
         raise SystemExit()
     else:
@@ -100,9 +103,14 @@ def mask_to_image(mask):
 if __name__ == "__main__":
     args = get_args()
     in_files = args.input
+    # test_dataset = torchvision.datasets.ImageFolder(root=in_files)
+    # testdata_files = torch.utils.data.dataloader(test_dataset)
+    in_files_list= listdir(in_files)
+    # c = enumerate(a)
+    out_file_prefix = '/home/ROBARTS/sxing/Needle_segmentation_2D_US/Pytorch-UNet/data/P003_liver_needle_insertion/Needle_Video_02_Out_epoch200/'
     out_files = get_output_filenames(args)
 
-    net = UNet(n_channels=1, n_classes=1)
+    net = UNet(n_channels=1, n_classes=1, bilinear=False)
 
     logging.info("Loading model {}".format(args.model))
 
@@ -113,10 +121,10 @@ if __name__ == "__main__":
 
     logging.info("Model loaded !")
 
-    for i, fn in enumerate(in_files):
+    for i, fn in enumerate(in_files_list):
         logging.info("\nPredicting image {} ...".format(fn))
-
-        img = Image.open(fn)
+        filenames_full = in_files + fn
+        img = Image.open(in_files+fn)
 
         mask = predict_img(net=net,
                            full_img=img,
@@ -127,7 +135,7 @@ if __name__ == "__main__":
         if not args.no_save:
             out_fn = out_files[i]
             result = mask_to_image(mask)
-            result.save(out_files[i])
+            result.save(out_file_prefix+out_files[i])
 
             logging.info("Mask saved to {}".format(out_files[i]))
 
